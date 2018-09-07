@@ -21,10 +21,7 @@ type baseReqParams struct {
 	Path string `json:"-"`
 }
 
-func (b *baseReqParams) initialize(extPath string, mobile ...string) error {
-	if err := o.check(); err != nil {
-		return err
-	}
+func (b *baseReqParams) initialize(o *info, extPath string, mobile ...string) error {
 	now := time.Now().Unix()
 	rands := strconv.Itoa(100000 + rand.Intn(999999-100000))
 	data := "appkey=" + o.appKey + "&random=" + rands + "&time=" + strconv.FormatInt(now, 10)
@@ -72,17 +69,8 @@ type info struct {
 	appKey string
 }
 
-var o *info
-
-func SetInfo(appID, appKey string) {
-	o = &info{appID: appID, appKey: appKey}
-}
-
-func (o *info) check() error {
-	if o == nil {
-		return errors.New("请配置appID和appKey")
-	}
-	return nil
+func NewInfo(appID, appKey string) *info {
+	return &info{appID: appID, appKey: appKey}
 }
 
 // 添加短信签名
@@ -96,7 +84,7 @@ type signAddRes struct {
 	} `json:"data"`
 }
 
-func SignAdd(text, pic, remark string) (*signAddRes, error) {
+func SignAdd(o *info, text, pic, remark string) (*signAddRes, error) {
 	var req = struct {
 		Pic    string `json:"pic"`
 		Remark string `json:"remark"`
@@ -107,7 +95,7 @@ func SignAdd(text, pic, remark string) (*signAddRes, error) {
 		Remark: remark,
 		Text:   text,
 	}
-	if err := req.baseReqParams.initialize("add_sign"); err != nil {
+	if err := req.baseReqParams.initialize(o, "add_sign"); err != nil {
 		return nil, err
 	}
 	var res = new(signAddRes)
@@ -120,14 +108,14 @@ type delRes struct {
 	Msg    string `json:"errmsg"`
 }
 
-func SignDel(sids []int) (*delRes, error) {
+func SignDel(o *info, sids []int) (*delRes, error) {
 	var req = struct {
 		SignId []int `json:"sign_id"`
 		baseReqParams
 	}{
 		SignId: sids,
 	}
-	if err := req.baseReqParams.initialize("del_sign"); err != nil {
+	if err := req.baseReqParams.initialize(o, "del_sign"); err != nil {
 		return nil, err
 	}
 	var res = new(delRes)
@@ -147,7 +135,7 @@ type getSignRes struct {
 	} `json:"data"`
 }
 
-func GetSign(sids []int) (*getSignRes, error) {
+func GetSign(o *info, sids []int) (*getSignRes, error) {
 	var req = struct {
 		SignId []int `json:"sign_id"`
 		baseReqParams
@@ -155,7 +143,7 @@ func GetSign(sids []int) (*getSignRes, error) {
 		SignId: sids,
 	}
 	var res = new(getSignRes)
-	req.baseReqParams.initialize("get_sign")
+	req.baseReqParams.initialize(o, "get_sign")
 	return res, httpFetch(&req, res)
 }
 
@@ -171,7 +159,7 @@ type tplAddRes struct {
 	} `json:"data"`
 }
 
-func TplAdd(text, title, remark string, tp int) (*tplAddRes, error) {
+func TplAdd(o *info, text, title, remark string, tp int) (*tplAddRes, error) {
 	var req = struct {
 		Remark string `json:"remark"`
 		Text   string `json:"text"`
@@ -184,20 +172,20 @@ func TplAdd(text, title, remark string, tp int) (*tplAddRes, error) {
 		Title:  title,
 		Type:   tp,
 	}
-	req.baseReqParams.initialize("add_template")
+	req.baseReqParams.initialize(o, "add_template")
 	var res = new(tplAddRes)
 	return res, httpFetch(&req, &res)
 }
 
 // 模版删除
-func TplDel(tplids []int) (*delRes, error) {
+func TplDel(o *info, tplids []int) (*delRes, error) {
 	var req = struct {
 		TplId []int `json:"tpl_id"`
 		baseReqParams
 	}{
 		TplId: tplids,
 	}
-	req.baseReqParams.initialize("del_template")
+	req.baseReqParams.initialize(o, "del_template")
 	var res = new(delRes)
 	return res, httpFetch(&req, &res)
 }
@@ -216,14 +204,14 @@ type getTplRes struct {
 	} `json:"data"`
 }
 
-func GetTpl(tplids []int) (*getTplRes, error) {
+func GetTpl(o *info, tplids []int) (*getTplRes, error) {
 	var req = struct {
 		TplId []int `json:"tpl_id"`
 		baseReqParams
 	}{
 		TplId: tplids,
 	}
-	req.baseReqParams.initialize("get_template")
+	req.baseReqParams.initialize(o, "get_template")
 	res := new(getTplRes)
 	return res, httpFetch(&req, res)
 }
@@ -236,7 +224,7 @@ type sendSMSSingleRes struct {
 	Sid    string `json:"sid"`
 }
 
-func SendSMSSingle(mobile, sign string, tplId int, params []string) (*sendSMSSingleRes, error) {
+func SendSMSSingle(o *info, mobile, sign string, tplId int, params []string) (*sendSMSSingleRes, error) {
 	var req = struct {
 		Sign   string   `json:"sign"`
 		TplId  int      `json:"tpl_id"`
@@ -253,7 +241,7 @@ func SendSMSSingle(mobile, sign string, tplId int, params []string) (*sendSMSSin
 	}
 	req.Tel.Nationcode = "86"
 	req.Tel.Mobile = mobile
-	req.baseReqParams.initialize("sendsms", mobile)
+	req.baseReqParams.initialize(o, "sendsms", mobile)
 	sRes := new(sendSMSSingleRes)
 	return sRes, httpFetch(&req, sRes)
 }
